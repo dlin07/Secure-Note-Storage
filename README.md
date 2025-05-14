@@ -5,7 +5,7 @@ This project develops a Trusted Application (TA) that securely stores, retrieves
 Make sure to follow the installation process for OP-TEE QEMU. Below are some instructions to make sure your system is ready to run the program.
 **Note: Requires Ubuntu 20.04, 22.04, or 24.04** 
 
-## Installation Steps
+## Installation and Run Steps
 
 ### 1. Installing OP-TEE in Simulation Mode
 1. Open the terminal and install the following tools to build OP-TEE:
