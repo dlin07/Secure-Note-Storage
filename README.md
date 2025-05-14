@@ -1,4 +1,4 @@
-# secure_note_storage
+# Secure Note Storage
 This project develops a Trusted Application (TA) that securely stores, retrieves, and deletes confidential notes within the Trusted Execution Environment (TEE) using OP-TEE. The application will ensure that sensitive information remains protected from unauthorized access in the normal world.
 
 ### Prerequisites
