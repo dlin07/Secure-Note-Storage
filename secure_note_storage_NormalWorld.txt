@@ -1,0 +1,93 @@
+Initializing TEE context...
+Opening session with TA UUID: 12345678-1234-1234-1234-567890abcdef
+Session opened successfully.
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+# optee_example_secure_note_storage 
+Initializing TEE context...
+Opening session with TA UUID: 12345678-1234-1234-1234-567890abcdef
+Session opened successfully.
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 1
+Enter note ID (max 31 chars): hello
+Enter note content (max 200 chars): yup this is totally secure 
+CA: Invoking CMD_STORE_NOTE for ID: 'hello', Content len: 26
+CA: Note 'hello' store command sent successfully.
+
+Press Enter to continue...
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 2
+Enter note ID to read (max 31 chars): hello
+CA: Invoking CMD_READ_NOTE for ID: 'hello'
+CA: Secure Note (ID: 'hello'): yup this is totally secure
+
+Press Enter to continue...
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 1
+Enter note ID (max 31 chars): mhm
+Enter note content (max 200 chars): yup nop
+CA: Invoking CMD_STORE_NOTE for ID: 'mhm', Content len: 7
+CA: Note 'mhm' store command sent successfully.
+
+Press Enter to continue...
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 3
+Enter note ID to delete (max 31 chars): mhm
+CA: Invoking CMD_CLEAR_NOTE for ID: 'mhm'
+CA: Note 'mhm' delete command sent successfully.
+
+Press Enter to continue...
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 2
+Enter note ID to read (max 31 chars): mhm
+CA: Invoking CMD_READ_NOTE for ID: 'mhm'
+CA: TEEC_InvokeCommand(CMD_READ_NOTE) failed with code 0xffff0008 origin 0x4
+CA: Note ID 'mhm' not found in secure storage.
+
+Press Enter to continue...
+
+--- Secure Note Storage Menu (AES Encrypted) ---
+1. Store a new note
+2. Read a note
+3. Delete a note
+4. Exit
+-----------------------------------------------
+Enter your choice: 4
+Exiting...
+Closing session...
+Finalizing TEE context...
