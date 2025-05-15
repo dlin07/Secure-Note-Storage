@@ -1,0 +1,71 @@
+D/TC:? 0 tee_ta_init_pseudo_ta_session:303 Lookup pseudo TA 12345678-1234-1234-1234-567890abcdef
+D/TC:? 0 ldelf_load_ldelf:110 ldelf load address 0x105000
+D/LD:  ldelf:142 Loading TS 12345678-1234-1234-1234-567890abcdef
+D/TC:? 0 ldelf_syscall_open_bin:163 Lookup user TA ELF 12345678-1234-1234-1234-567890abcdef (early TA)
+D/TC:? 0 ldelf_syscall_open_bin:167 res=0xffff0008
+D/TC:? 0 ldelf_syscall_open_bin:163 Lookup user TA ELF 12345678-1234-1234-1234-567890abcdef (Secure Storage TA)
+D/TC:? 0 ldelf_syscall_open_bin:167 res=0xffff0008
+D/TC:? 0 ldelf_syscall_open_bin:163 Lookup user TA ELF 12345678-1234-1234-1234-567890abcdef (REE)
+D/TC:? 0 ldelf_syscall_open_bin:167 res=0
+D/LD:  ldelf:176 ELF (12345678-1234-1234-1234-567890abcdef) at 0x14a000
+D/TA:  TA_CreateEntryPoint:223 Secure Note TA (AES): CreateEntryPoint
+I/TA: Secure Note TA (AES) initialized. Max notes: 5
+I/TA: Secure Note TA (AES): Session opened.
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:252 TA (AES): InvokeEntryPoint: cmd_id=0x0 (0), param_types=0x55
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:253 TA: Param0 type: 5, size: 6
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:254 TA: Param1 type: 5, size: 27
+I/TA: TA (AES): Processing CMD_STORE_NOTE
+D/TA:  find_note_slot:213 find_note_slot: Found empty slot 0 for writing
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:320 TA: STORE - Using slot 0 for ID: hello
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:323 TA: STORE - Generated IV for slot 0.
+D/TA:  do_aes_crypto:108 AES Encrypt: input_len=26, padding_val/len=6, len_to_process=32
+D/TA:  do_aes_crypto:131 AES: Calling CipherDoFinal: mode=0, len_to_process=32, output_buffer_size_in=216
+D/TA:  do_aes_crypto:141 AES: CipherDoFinal success. Output length (potentially padded for decrypt): 32
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:335 TA: STORE - Encrypted content length (padded): 32
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:347 TA: STORE - Total stored length (IV+Cipher): 48
+I/TA: TA (AES): Note 'hello' (len 26) stored encrypted in slot 0.
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:252 TA (AES): InvokeEntryPoint: cmd_id=0x1 (1), param_types=0x65
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:253 TA: Param0 type: 5, size: 6
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:254 TA: Param1 type: 6, size: 201
+I/TA: TA (AES): Processing CMD_READ_NOTE
+D/TA:  find_note_slot:209 find_note_slot: Found existing ID 'hello' at slot 0
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:376 TA: READ - Reading from slot 0 for ID: 'hello'
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:388 TA: READ - Extracted IV. Stored ciphertext length: 32
+D/TA:  do_aes_crypto:131 AES: Calling CipherDoFinal: mode=1, len_to_process=32, output_buffer_size_in=200
+D/TA:  do_aes_crypto:141 AES: CipherDoFinal success. Output length (potentially padded for decrypt): 32
+D/TA:  do_aes_crypto:166 AES Decrypt: Last byte (padding_val) = 6
+D/TA:  do_aes_crypto:189 AES Decrypt: Unpadded output length: 26
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:400 TA: READ - Decrypted content length (unpadded): 26
+I/TA: TA (AES): Note 'hello' read securely from slot 0.
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:252 TA (AES): InvokeEntryPoint: cmd_id=0x0 (0), param_types=0x55
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:253 TA: Param0 type: 5, size: 4
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:254 TA: Param1 type: 5, size: 8
+I/TA: TA (AES): Processing CMD_STORE_NOTE
+D/TA:  find_note_slot:213 find_note_slot: Found empty slot 1 for writing
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:320 TA: STORE - Using slot 1 for ID: mhm
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:323 TA: STORE - Generated IV for slot 1.
+D/TA:  do_aes_crypto:108 AES Encrypt: input_len=7, padding_val/len=9, len_to_process=16
+D/TA:  do_aes_crypto:131 AES: Calling CipherDoFinal: mode=0, len_to_process=16, output_buffer_size_in=216
+D/TA:  do_aes_crypto:141 AES: CipherDoFinal success. Output length (potentially padded for decrypt): 16
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:335 TA: STORE - Encrypted content length (padded): 16
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:347 TA: STORE - Total stored length (IV+Cipher): 32
+I/TA: TA (AES): Note 'mhm' (len 7) stored encrypted in slot 1.
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:252 TA (AES): InvokeEntryPoint: cmd_id=0x2 (2), param_types=0x5
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:253 TA: Param0 type: 5, size: 4
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:254 TA: Param1 type: 0, size: 0
+I/TA: TA (AES): Processing CMD_CLEAR_NOTE
+D/TA:  find_note_slot:209 find_note_slot: Found existing ID 'mhm' at slot 1
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:437 TA: CLEAR - Clearing slot 1 for ID: 'mhm'
+I/TA: TA (AES): Note 'mhm' in slot 1 cleared.
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:252 TA (AES): InvokeEntryPoint: cmd_id=0x1 (1), param_types=0x65
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:253 TA: Param0 type: 5, size: 4
+D/TA:  __GP11_TA_InvokeCommandEntryPoint:254 TA: Param1 type: 6, size: 201
+I/TA: TA (AES): Processing CMD_READ_NOTE
+D/TA:  find_note_slot:217 find_note_slot: ID 'mhm' not found (find_empty_for_write=0)
+E/TA:  __GP11_TA_InvokeCommandEntryPoint:373 TA: READ - Note ID 'mhm' not found.
+D/TC:? 0 tee_ta_invoke_command:798 Error: ffff0008 of 4
+D/TC:? 0 tee_ta_close_session:460 csess 0xc51d73c8 id 2
+D/TC:? 0 tee_ta_close_session:479 Destroy session
+I/TA: Secure Note TA (AES): Session closed
+D/TA:  TA_DestroyEntryPoint:235 Secure Note TA (AES): DestroyEntryPoint
+D/TC:? 0 destroy_context:318 Destroy TA ctx (0xc51d7388)
