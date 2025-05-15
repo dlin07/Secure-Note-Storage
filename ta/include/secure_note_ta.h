@@ -35,8 +35,26 @@
 #define CMD_READ_NOTE        1
 #define CMD_CLEAR_NOTE       2
 
-// Define max SIZES for buffers in TA (including space for null terminator)
-#define MAX_NOTE_ID_TA_LEN 32       // Allows for IDs up to 31 chars + null
-#define MAX_PLAINTEXT_NOTE_TA_LEN 201 // Allows for content up to 200 chars + null
+/* Maximum length of a note ID string (excluding null terminator) */
+#define MAX_NOTE_ID_CHARS 31
+/* Buffer size in TA for ID (MAX_NOTE_ID_CHARS + 1 for null terminator) */
+#define MAX_NOTE_ID_TA_LEN (MAX_NOTE_ID_CHARS + 1)
 
-#endif /* SECURE_NOTE_TA_H */
+/* Maximum length of PLAINTEXT note content (excluding null terminator) */
+#define MAX_PLAINTEXT_CONTENT_CHARS 200
+/* Buffer size in TA/CA for plaintext content (MAX_PLAINTEXT_CONTENT_CHARS + 1 for null) */
+#define MAX_PLAINTEXT_CONTENT_BUFFER_LEN (MAX_PLAINTEXT_CONTENT_CHARS + 1)
+
+/* AES Configuration (relevant for TA's internal storage calculations) */
+#define AES_BLOCK_SIZE 16  /* Bytes */
+#define IV_SIZE AES_BLOCK_SIZE /* Bytes */
+
+/* Max length of ciphertext after PKCS#7 padding.
+ * Plaintext can expand by up to (AES_BLOCK_SIZE - 1) bytes, or by AES_BLOCK_SIZE if already block aligned.
+ */
+#define MAX_CIPHERTEXT_PADDED_LEN (MAX_PLAINTEXT_CONTENT_CHARS + AES_BLOCK_SIZE)
+
+/* Total buffer size in TA to store [IV (16 bytes)][Padded Ciphertext] */
+#define MAX_NOTE_STORAGE_BUFFER_TA_LEN (IV_SIZE + MAX_CIPHERTEXT_PADDED_LEN)
+
+#endif

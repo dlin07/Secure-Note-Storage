@@ -1,28 +1,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <err.h>
+#include <err.h>    
 
 #include <tee_client_api.h>
-#include "secure_note_ta.h"
+#include "secure_note_ta.h" 
 
-// Define a maximum size for notes and IDs for buffer safety
-#define MAX_USER_INPUT_LEN 256
-#define MAX_NOTE_ID_LEN 32
-#define MAX_NOTE_CONTENT_LEN 200
+#define MAX_USER_CHOICE_LEN 10 // For menu choice input
+#define CA_NOTE_ID_BUFFER_LEN (MAX_NOTE_ID_TA_LEN) // Buffer for ID input (matches TA's buffer def)
+#define CA_NOTE_CONTENT_BUFFER_LEN (MAX_PLAINTEXT_CONTENT_BUFFER_LEN) // Buffer for content input
 
+// Helper stuff
 void initialize_tee_session(TEEC_Context *ctx, TEEC_Session *sess, const TEEC_UUID *uuid);
 void terminate_tee_session(TEEC_Context *ctx, TEEC_Session *sess);
+int get_user_input(const char *prompt, char *buffer, size_t buffer_size);
 void handle_store_note(TEEC_Session *sess);
 void handle_read_note(TEEC_Session *sess);
 void handle_clear_note(TEEC_Session *sess);
 void display_menu(void);
-// int handle_authenticate_pin(TEEC_Session *sess);
 
 TEEC_Context teec_ctx;
 TEEC_Session teec_sess;
 const TEEC_UUID ta_uuid = TA_SECURE_NOTE_UUID;
-// bool is_authenticated = false;
 
 
 void initialize_tee_session(TEEC_Context *ctx, TEEC_Session *sess, const TEEC_UUID *uuid) {
@@ -44,7 +43,6 @@ void initialize_tee_session(TEEC_Context *ctx, TEEC_Session *sess, const TEEC_UU
 
     res = TEEC_OpenSession(ctx, sess, uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-        // Clean up context if session open fails
         TEEC_FinalizeContext(ctx);
         errx(1, "TEEC_OpenSession failed with code 0x%x origin 0x%x", res, err_origin);
     }
@@ -58,168 +56,180 @@ void terminate_tee_session(TEEC_Context *ctx, TEEC_Session *sess) {
     TEEC_FinalizeContext(ctx);
 }
 
-// Gets a line of input from the user, handling potential overflows.
-// Returns 0 on success, -1 on error or EOF.
 int get_user_input(const char *prompt, char *buffer, size_t buffer_size) {
     char *ret_fgets;
-    printf("%s", prompt);
+    if (prompt) printf("%s", prompt);
     fflush(stdout);
     ret_fgets = fgets(buffer, buffer_size, stdin);
     if (ret_fgets == NULL) {
         if (feof(stdin)) {
-            printf("EOF detected. Exiting.\n");
-            return -1; // EOF
+            printf("\nEOF detected. Exiting.\n"); // Add newline for cleaner exit
+            return -1;
         } else {
             perror("fgets failed");
-            return -1; // Error
+            return -1;
         }
     }
-
-    // Remove trailing newline, if any
-    buffer[strcspn(buffer, "\n")] = 0;
-
-    // Check for overflow if newline was not read
-    if (strchr(buffer, '\n') == NULL && strlen(buffer) == buffer_size - 1) {
-        printf("Warning: Input too long and was truncated.\n");
+    buffer[strcspn(buffer, "\n")] = 0; // Remove trailing newline
+    // Check for overflow if newline wasn't read (buffer full)
+    if (strchr(buffer, '\0') == &buffer[buffer_size - 1] && buffer[buffer_size -1] != '\0') {
+        printf("Warning: Input too long and was truncated. Please try again with shorter input.\n");
         int c;
-        while ((c = getchar()) != '\n' && c != EOF);
+        while ((c = getchar()) != '\n' && c != EOF); // Clear rest of stdin line
+        buffer[0] = '\0'; // Mark buffer as empty to force re-entry typically
+        return 0; // Indicate truncation but allow retry
     }
     return 0;
 }
 
-
 void handle_store_note(TEEC_Session *sess) {
-    char note_id[MAX_NOTE_ID_LEN];
-    char note_content[MAX_NOTE_CONTENT_LEN];
+    char note_id[CA_NOTE_ID_BUFFER_LEN];
+    char note_content[CA_NOTE_CONTENT_BUFFER_LEN];
     TEEC_Operation op = {0};
     TEEC_Result res;
     uint32_t err_origin;
 
-    if (get_user_input("Enter note ID (max 31 chars): ", note_id, sizeof(note_id)) != 0) return;
-    if (get_user_input("Enter note content (max 199 chars): ", note_content, sizeof(note_content)) != 0) return;
+    printf("Enter note ID (max %d chars): ", MAX_NOTE_ID_CHARS);
+    if (get_user_input("", note_id, sizeof(note_id)) != 0) return;
+    if (strlen(note_id) > MAX_NOTE_ID_CHARS) {
+        printf("Error: Note ID too long. Max %d characters allowed.\n", MAX_NOTE_ID_CHARS);
+        return;
+    }
+    if (strlen(note_id) == 0) {
+        printf("Error: Note ID cannot be empty.\n");
+        return;
+    }
 
-    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE);
+    printf("Enter note content (max %d chars): ", MAX_PLAINTEXT_CONTENT_CHARS);
+    if (get_user_input("", note_content, sizeof(note_content)) != 0) return;
+    if (strlen(note_content) > MAX_PLAINTEXT_CONTENT_CHARS) {
+        printf("Error: Note content too long. Max %d characters allowed.\n", MAX_PLAINTEXT_CONTENT_CHARS);
+        return;
+    }
+    // Storing an empty content string "" is allowed by the TA.
+
+    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, // Note ID
+                                     TEEC_MEMREF_TEMP_INPUT, // Note Content
+                                     TEEC_NONE, TEEC_NONE);
     op.params[0].tmpref.buffer = note_id;
-    op.params[0].tmpref.size = strlen(note_id) + 1;
+    op.params[0].tmpref.size = strlen(note_id) + 1; // Send null-terminated string
     op.params[1].tmpref.buffer = note_content;
-    op.params[1].tmpref.size = strlen(note_content) + 1;
+    op.params[1].tmpref.size = strlen(note_content) + 1; // Send null-terminated string
 
-    printf("Invoking CMD_STORE_NOTE for ID: %s\n", note_id);
+    printf("CA: Invoking CMD_STORE_NOTE for ID: '%s', Content len: %zu\n",
+           note_id, strlen(note_content));
     res = TEEC_InvokeCommand(sess, CMD_STORE_NOTE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        fprintf(stderr, "TEEC_InvokeCommand(CMD_STORE_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
+        fprintf(stderr, "CA: TEEC_InvokeCommand(CMD_STORE_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
     } else {
-        printf("Note '%s' store command sent.\n", note_id);
+        printf("CA: Note '%s' store command sent successfully.\n", note_id);
     }
 }
 
 void handle_read_note(TEEC_Session *sess) {
-    char note_id[MAX_NOTE_ID_LEN];
-    char received_content[MAX_NOTE_CONTENT_LEN + 64];
+    char note_id[CA_NOTE_ID_BUFFER_LEN];
+    char received_plaintext[CA_NOTE_CONTENT_BUFFER_LEN]; // Buffer to receive plaintext
     TEEC_Operation op = {0};
     TEEC_Result res;
     uint32_t err_origin;
 
-    if (get_user_input("Enter note ID to read: ", note_id, sizeof(note_id)) != 0) return;
+    printf("Enter note ID to read (max %d chars): ", MAX_NOTE_ID_CHARS);
+    if (get_user_input("", note_id, sizeof(note_id)) != 0) return;
+    if (strlen(note_id) > MAX_NOTE_ID_CHARS) {
+        printf("Error: Note ID too long.\n");
+        return;
+    }
+    if (strlen(note_id) == 0) {
+        printf("Error: Note ID cannot be empty.\n");
+        return;
+    }
 
-    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_OUTPUT, TEEC_NONE, TEEC_NONE);
+    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT,  // Note ID to read
+                                     TEEC_MEMREF_TEMP_OUTPUT, // Buffer for note content
+                                     TEEC_NONE, TEEC_NONE);
     op.params[0].tmpref.buffer = note_id;
     op.params[0].tmpref.size = strlen(note_id) + 1;
-    op.params[1].tmpref.buffer = received_content;
-    op.params[1].tmpref.size = sizeof(received_content);
+    op.params[1].tmpref.buffer = received_plaintext;
+    op.params[1].tmpref.size = sizeof(received_plaintext); // CA tells TA max size it can receive
 
-    printf("Invoking CMD_READ_NOTE for ID: %s\n", note_id);
+    printf("CA: Invoking CMD_READ_NOTE for ID: '%s'\n", note_id);
     res = TEEC_InvokeCommand(sess, CMD_READ_NOTE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        fprintf(stderr, "TEEC_InvokeCommand(CMD_READ_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
+        fprintf(stderr, "CA: TEEC_InvokeCommand(CMD_READ_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
         if (res == TEEC_ERROR_ITEM_NOT_FOUND) {
-             printf("Note ID '%s' not found in secure storage.\n", note_id);
+             printf("CA: Note ID '%s' not found in secure storage.\n", note_id);
+        } else if (res == TEEC_ERROR_SHORT_BUFFER) {
+            fprintf(stderr, "CA: Buffer to receive note too small. TA requires buffer of size %u\n", op.params[1].tmpref.size);
         }
     } else {
-        // op.params[1].tmpref.size will contain the actual size written by TA
-        received_content[op.params[1].tmpref.size] = '\0';
-        printf("Secure Note (ID: %s): %s\n", note_id, received_content);
+        printf("CA: Secure Note (ID: '%s'): %s\n", note_id, received_plaintext);
     }
 }
 
 void handle_clear_note(TEEC_Session *sess) {
-    char note_id[MAX_NOTE_ID_LEN];
+    char note_id[CA_NOTE_ID_BUFFER_LEN];
     TEEC_Operation op = {0};
     TEEC_Result res;
     uint32_t err_origin;
 
-    if (get_user_input("Enter note ID to delete: ", note_id, sizeof(note_id)) != 0) return;
+    printf("Enter note ID to delete (max %d chars): ", MAX_NOTE_ID_CHARS);
+    if (get_user_input("", note_id, sizeof(note_id)) != 0) return;
+    if (strlen(note_id) > MAX_NOTE_ID_CHARS) {
+        printf("Error: Note ID too long.\n");
+        return;
+    }
+    if (strlen(note_id) == 0) {
+        printf("Error: Note ID cannot be empty.\n");
+        return;
+    }
 
-    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
+    op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, // Note ID to delete
+                                     TEEC_NONE, TEEC_NONE, TEEC_NONE);
     op.params[0].tmpref.buffer = note_id;
     op.params[0].tmpref.size = strlen(note_id) + 1;
 
-    printf("Invoking CMD_CLEAR_NOTE for ID: %s\n", note_id);
+    printf("CA: Invoking CMD_CLEAR_NOTE for ID: '%s'\n", note_id);
     res = TEEC_InvokeCommand(sess, CMD_CLEAR_NOTE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        fprintf(stderr, "TEEC_InvokeCommand(CMD_CLEAR_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
+        fprintf(stderr, "CA: TEEC_InvokeCommand(CMD_CLEAR_NOTE) failed with code 0x%x origin 0x%x\n", res, err_origin);
+         if (res == TEEC_ERROR_ITEM_NOT_FOUND) {
+             printf("CA: Note ID '%s' not found for deletion.\n", note_id);
+        }
     } else {
-        printf("Note '%s' delete command sent.\n", note_id);
+        printf("CA: Note '%s' delete command sent successfully.\n", note_id);
     }
 }
 
 void display_menu(void) {
-    printf("\n--- Secure Note Storage Menu ---\n");
-    // if (!is_authenticated) {
-    //     printf("P. Enter PIN\n");
-    // } else {
-        printf("1. Store a new note\n");
-        printf("2. Read a note\n");
-        printf("3. Delete a note\n");
-    // }
+    printf("\n--- Secure Note Storage Menu (AES Encrypted) ---\n");
+    printf("1. Store a new note\n");
+    printf("2. Read a note\n");
+    printf("3. Delete a note\n");
     printf("4. Exit\n");
-    printf("---------------------------------\n");
-    printf("Enter your choice: ");
+    printf("-----------------------------------------------\n");
 }
 
-
 int main(void) {
-    char choice_buffer[MAX_USER_INPUT_LEN];
+    char choice_buffer[MAX_USER_CHOICE_LEN];
     int choice = 0;
 
     initialize_tee_session(&teec_ctx, &teec_sess, &ta_uuid);
 
-    // is_authenticated = handle_authenticate_pin(&teec_sess);
-    // if (!is_authenticated) {
-    //     printf("Authentication failed. Exiting.\n");
-    //     terminate_tee_session(&teec_ctx, &teec_sess);
-    //     return 1;
-    // }
-    // printf("PIN Authentication successful.\n");
-
-
     while (1) {
         display_menu();
-        if (get_user_input("", choice_buffer, sizeof(choice_buffer)) != 0) {
-            // EOF or error from get_user_input
-            break;
+        if (get_user_input("Enter your choice: ", choice_buffer, sizeof(choice_buffer)) != 0) {
+            break; // EOF or error
         }
 
-        // Basic input validation for choice
         if (strlen(choice_buffer) == 1 && choice_buffer[0] >= '1' && choice_buffer[0] <= '4') {
-            choice = choice_buffer[0] - '0';
+            choice = atoi(choice_buffer); // Convert char to int
         } else {
-            // Could also handle 'P' for PIN if implementing that menu option
-            printf("Invalid choice. Please try again.\n");
+            printf("Invalid choice '%s'. Please enter a number between 1 and 4.\n", choice_buffer);
+            choice = 0; // Reset choice
             continue;
         }
 
-        // if (!is_authenticated && choice != 'P' - '0' && choice != 4) {
-        //     printf("Please authenticate with PIN first.\n");
-        //     continue;
-        // }
-
         switch (choice) {
-            // case 'P' - '0': // If using 'P' for PIN
-            //     is_authenticated = handle_authenticate_pin(&teec_sess);
-            //     if (is_authenticated) printf("PIN Authentication successful.\n");
-            //     else printf("PIN Authentication failed.\n");
-            //     break;
             case 1:
                 handle_store_note(&teec_sess);
                 break;
@@ -234,10 +244,14 @@ int main(void) {
                 terminate_tee_session(&teec_ctx, &teec_sess);
                 return 0;
             default:
+                // Should not be reached if input validation is correct
                 printf("Invalid choice. Please try again.\n");
         }
+        printf("\nPress Enter to continue...");
+        get_user_input("", choice_buffer, sizeof(choice_buffer)); // Wait for user
     }
 
     terminate_tee_session(&teec_ctx, &teec_sess);
+    printf("Program terminated.\n");
     return 0;
 }
